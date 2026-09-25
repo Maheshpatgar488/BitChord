@@ -3,18 +3,15 @@ name: Build & Release BitChord
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -26,31 +23,35 @@ jobs:
       - name: Grant Execute Permission
         run: chmod +x gradlew
 
-      - name: Create or Reuse Signing Key
+      - name: Generate Signing Keystore
         run: |
-          if [ ! -f keystore.jks ]; then
-            keytool -genkeypair -v -keystore keystore.jks -alias bitchord -keyalg RSA -keysize 2048 -validity 10000 -storepass bitchord123 -keypass bitchord123 -dname "CN=BitChord, OU=Dev, O=Self, L=City, S=State, C=IN"
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git add keystore.jks
-            git commit -m "Save permanent signing keystore [skip ci]" || true
-            git push origin main || true
-          fi
+          keytool -genkeypair -v \
+            -keystore release.jks \
+            -alias bitchord_key \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass bitchord123 \
+            -keypass bitchord123 \
+            -dname "CN=BitChord, O=Music, C=US"
 
       - name: Build Prod Release APK
         run: ./gradlew assembleProdRelease
 
-      - name: Sign Single ARM64 APK
+      - name: Sign ARM64 APK
         run: |
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
           UNSIGNED=$(find app/build/outputs/apk/prod/release -name "*arm64-v8a*.apk" | head -n 1)
-          $APKSIGNER sign --ks keystore.jks --ks-key-alias bitchord --ks-pass pass:bitchord123 --key-pass pass:bitchord123 --out BitChord-arm64.apk "$UNSIGNED"
+          $APKSIGNER sign \
+            --ks release.jks \
+            --ks-key-alias bitchord_key \
+            --ks-pass pass:bitchord123 \
+            --key-pass pass:bitchord123 \
+            --out BitChord-arm64-signed.apk \
+            "$UNSIGNED"
 
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
+      - name: Upload Signed APK
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: "v1.7-build${{ github.run_number }}"
-          name: "BitChord Origin v1.7 (Build ${{ github.run_number }})"
-          files: BitChord-arm64.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: BitChord-arm64-signed
+          path: BitChord-arm64-signed.apk
