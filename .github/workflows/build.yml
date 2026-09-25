@@ -1,17 +1,67 @@
-name: Build and Release BitChord
+name: Auto Build Renamed BitChord
 
 on:
+  schedule:
+    # Runs automatically every 12 hours
+    - cron: '0 */12 * * *'
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even if version is up to date'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+    outputs:
+      should_build: ${{ steps.version_check.outputs.should_build }}
+      tag: ${{ steps.version_check.outputs.tag }}
     steps:
-      - name: Checkout Code
+      - name: Check Upstream vs Fork Version
+        id: version_check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_TAG=$(gh api repos/kushagrasinghx/BitChord/releases/latest --jq .tag_name)
+          MY_TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name 2>/dev/null || echo "none")
+
+          echo "Upstream latest tag: $UPSTREAM_TAG"
+          echo "Fork latest tag: $MY_TAG"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_build }}" = "true" ]; then
+            echo "Manual trigger with force build enabled."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$UPSTREAM_TAG" >> "$GITHUB_OUTPUT"
+          elif [ "$UPSTREAM_TAG" != "$MY_TAG" ]; then
+            echo "New version detected ($UPSTREAM_TAG != $MY_TAG)."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$UPSTREAM_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "Already up to date ($MY_TAG). Skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Upstream Code
         uses: actions/checkout@v4
+        with:
+          repository: kushagrasinghx/BitChord
+          ref: ${{ needs.check.outputs.tag }}
+
+      - name: Rename Package to Apple Music
+        run: |
+          sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.apple.android.music"/' app/build.gradle.kts
+          echo "Verified applicationId modification:"
+          grep "applicationId" app/build.gradle.kts
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -39,8 +89,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v1.7-build-${{ github.run_number }}"
-          name: "BitChord v1.7 Build ${{ github.run_number }}"
+          tag_name: ${{ needs.check.outputs.tag }}
+          name: "BitChord ${{ needs.check.outputs.tag }} (OriginOS)"
           files: signed-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
