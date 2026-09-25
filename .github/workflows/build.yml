@@ -23,14 +23,22 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 
-      - name: Build APK
-        run: ./gradlew assembleUniversalRelease || ./gradlew assembleRelease
+      - name: Build Production Release APK
+        run: ./gradlew assembleProdRelease
+
+      - name: Download Uber APK Signer
+        run: |
+          wget -q https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+
+      - name: Sign APK
+        run: |
+          java -jar uber-apk-signer-1.3.0.jar -a "app/build/outputs/apk/prod/release/*.apk" --out signed-apks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v1.7-build-${{ github.run_number }}"
-          name: "BitChord OriginOS Build #${{ github.run_number }}"
-          files: app/build/outputs/apk/**/*.apk
+          name: "BitChord v1.7 Build ${{ github.run_number }}"
+          files: signed-apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
