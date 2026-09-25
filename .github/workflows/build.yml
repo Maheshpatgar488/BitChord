@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           UPSTREAM_TAG=$(gh api repos/kushagrasinghx/BitChord/releases/latest --jq .tag_name)
-          MY_TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name 2>/dev/null || echo "none")
+          MY_TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name || echo "none")
 
           echo "Upstream latest tag: $UPSTREAM_TAG"
           echo "Fork latest tag: $MY_TAG"
@@ -60,6 +60,7 @@ jobs:
       - name: Rename Package to Apple Music
         run: |
           sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.apple.android.music"/' app/build.gradle.kts
+          find app/src -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's|api.github.com/repos/kushagrasinghx/BitChord/releases|localhost/disabled|g' {} +
           echo "Verified applicationId modification:"
           grep "applicationId" app/build.gradle.kts
 
