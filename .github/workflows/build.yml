@@ -32,7 +32,9 @@ jobs:
 
       - name: Sign APK
         run: |
-          java -jar uber-apk-signer-1.3.0.jar -a "app/build/outputs/apk/prod/release/*.apk" --out signed-apks
+          mkdir -p unsigned-apks signed-apks
+          find app/build/outputs/apk -type f -name "*.apk" -exec cp {} unsigned-apks/ \;
+          java -jar uber-apk-signer-1.3.0.jar -a unsigned-apks --out signed-apks
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
