@@ -2,8 +2,8 @@ name: Auto Build Renamed BitChord
 
 on:
   schedule:
-    # Runs automatically every 12 hours
-    - cron: '0 */12 * * *'
+    # Runs automatically every 2 hours
+    - cron: '0 */2 * * *'
   workflow_dispatch:
     inputs:
       force_build:
