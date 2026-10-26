@@ -2,96 +2,144 @@ name: Auto Build Renamed BitChord
 
 on:
   schedule:
-    # Runs automatically every 2 hours
-    - cron: '0 */2 * * *'
+    - cron: '0 */12 * * *'
   workflow_dispatch:
-    inputs:
-      force_build:
-        description: 'Force build even if version is up to date'
-        required: false
-        type: boolean
-        default: false
-
-permissions:
-  contents: write
 
 jobs:
-  check:
+  check-and-build:
     runs-on: ubuntu-latest
-    outputs:
-      should_build: ${{ steps.version_check.outputs.should_build }}
-      tag: ${{ steps.version_check.outputs.tag }}
     steps:
-      - name: Check Upstream vs Fork Version
-        id: version_check
+      - name: 1. Check Latest Upstream Tag
+        id: check_tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          UPSTREAM_TAG=$(gh api repos/kushagrasinghx/BitChord/releases/latest --jq .tag_name)
-          MY_TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name || echo "none")
+          UPSTREAM_TAG=$(curl -s https://api.github.com/repos/kushagrasinghx/BitChord/releases/latest | jq -r .tag_name)
+          FORK_TAG=$(gh release view --repo ${{ github.repository }} --json tagName -q .tagName 2>/dev/null || echo "none")
+          echo "Upstream: $UPSTREAM_TAG | Fork: $FORK_TAG"
 
-          echo "Upstream latest tag: $UPSTREAM_TAG"
-          echo "Fork latest tag: $MY_TAG"
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_build }}" = "true" ]; then
-            echo "Manual trigger with force build enabled."
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            echo "tag=$UPSTREAM_TAG" >> "$GITHUB_OUTPUT"
-          elif [ "$UPSTREAM_TAG" != "$MY_TAG" ]; then
-            echo "New version detected ($UPSTREAM_TAG != $MY_TAG)."
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            echo "tag=$UPSTREAM_TAG" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger via workflow_dispatch: forcing build."
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
+          elif [ "$UPSTREAM_TAG" = "$FORK_TAG" ] && [ "$UPSTREAM_TAG" != "null" ]; then
+            echo "Up-to-date with upstream. Skipping build."
+            echo "should_build=false" >> $GITHUB_OUTPUT
           else
-            echo "Already up to date ($MY_TAG). Skipping build."
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "New upstream version detected ($UPSTREAM_TAG). Commencing build."
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           fi
 
-  build:
-    needs: check
-    if: needs.check.outputs.should_build == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Upstream Code
+      - name: 2. Checkout Upstream Source Code
+        if: steps.check_tag.outputs.should_build == 'true'
         uses: actions/checkout@v4
         with:
           repository: kushagrasinghx/BitChord
-          ref: ${{ needs.check.outputs.tag }}
+          ref: ${{ steps.check_tag.outputs.tag }}
 
-      - name: Rename Package to Apple Music
+      - name: 3. Dynamic Package Renaming & In-App Updater Killer
+        if: steps.check_tag.outputs.should_build == 'true'
         run: |
-          sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.soundcloud.android"/' app/build.gradle.kts
-          find app/src -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's|api.github.com/repos/kushagrasinghx/BitChord/releases|localhost/disabled|g' {} +
-          echo "Verified applicationId modification:"
-          grep "applicationId" app/build.gradle.kts
+          echo "Patching package name to com.apple.android.music..."
+          sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.apple.android.music"/' app/build.gradle.kts
+          find . -name "AndroidManifest.xml" -exec sed -i 's/package="[^"]*com\.bitchord[^"]*"/package="com.apple.android.music"/g' {} +
 
-      - name: Set up JDK 17
+          echo "Disabling upstream in-app update checks..."
+          find app/src -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's|api.github.com/repos/kushagrasinghx/BitChord/releases|localhost/disabled|g' {} +
+
+      - name: 4. Patch AeroPulse Hi-Res Lossless Treble Boost Integration
+        if: steps.check_tag.outputs.should_build == 'true'
+        run: |
+          cat << 'EOF' > patch_aeropulse.py
+          import os
+
+          # 1. Patch NerdStats.kt to hold the live AeroPulse preset state
+          nerd_file = "shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/NerdStats.kt"
+          if os.path.exists(nerd_file):
+              with open(nerd_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "val current = MutableStateFlow<Snapshot?>(null)"
+              replacement = 'val aeroPulsePreset = MutableStateFlow<String?>("Lossless • Treble Air Boost")\n    val current = MutableStateFlow<Snapshot?>(null)'
+              if target in content and "aeroPulsePreset" not in content:
+                  content = content.replace(target, replacement, 1)
+                  with open(nerd_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched NerdStats.kt successfully")
+
+          # 2. Patch PlayerControls.kt to display AeroPulse Lossless badge under the seekbar
+          pc_file = "sharedUi/src/jvmSharedMain/kotlin/com/music/bitchord/ui/player/PlayerControls.kt"
+          if os.path.exists(pc_file):
+              with open(pc_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "private fun LosslessOrStats(\n    isLoading: Boolean,\n    stillRacing: Boolean,\n    losslessRequested: Boolean,\n    nerdStats: NerdStats.Snapshot?,\n    modifier: Modifier = Modifier,\n) {"
+              replacement = target + """
+              val aeroPreset by NerdStats.aeroPulsePreset.collectAsStateWithLifecycle()
+              if (aeroPreset != null) {
+                  LosslessLabel(
+                      text = aeroPreset!!,
+                      iconPainter = painterResource(Res.drawable.ic_lossless),
+                      animated = true,
+                      modifier = modifier,
+                  )
+                  return
+              }"""
+              if target in content and "aeroPreset" not in content:
+                  content = content.replace(target, replacement, 1)
+                  with open(pc_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched PlayerControls.kt successfully")
+
+          # 3. Patch PlaybackService.kt to receive broadcast events from AeroPulse
+          ps_file = "app/src/main/java/com/music/bitchord/playback/PlaybackService.kt"
+          if os.path.exists(ps_file):
+              with open(ps_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "override fun onCreate() {\n        super.onCreate()"
+              receiver_code = """override fun onCreate() {
+                  super.onCreate()
+                  try {
+                      val filter = android.content.IntentFilter("com.aeropulse.audio.ACTION_PRESET_CHANGED")
+                      val receiver = object : android.content.BroadcastReceiver() {
+                          override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+                              intent?.getStringExtra("quality_label")?.let {
+                                  com.music.bitchord.data.NerdStats.aeroPulsePreset.value = it
+                              }
+                          }
+                      }
+                      androidx.core.content.ContextCompat.registerReceiver(
+                          this, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                      )
+                  } catch (_: Exception) {}"""
+              if target in content and "com.aeropulse.audio.ACTION_PRESET_CHANGED" not in content:
+                  content = content.replace(target, receiver_code, 1)
+                  with open(ps_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched PlaybackService.kt successfully")
+          EOF
+          python3 patch_aeropulse.py
+
+      - name: 5. Setup Java JDK 17
+        if: steps.check_tag.outputs.should_build == 'true'
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
 
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x gradlew
-
-      - name: Build Production Release APK
-        run: ./gradlew assembleProdRelease
-
-      - name: Download Uber APK Signer
+      - name: 6. Build and Sign APKs
+        if: steps.check_tag.outputs.should_build == 'true'
         run: |
-          wget -q https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Sign APK
-        run: |
-          mkdir -p unsigned-apks signed-apks
-          find app/build/outputs/apk -type f -name "*.apk" -exec cp {} unsigned-apks/ \;
-          java -jar uber-apk-signer-1.3.0.jar -a unsigned-apks --out signed-apks
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.check.outputs.tag }}
-          name: "BitChord ${{ needs.check.outputs.tag }} (OriginOS)"
-          files: signed-apks/*.apk
+      - name: 7. Publish GitHub Release
+        if: steps.check_tag.outputs.should_build == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.check_tag.outputs.tag }}"
+          gh release upload "$TAG" app/build/outputs/apk/release/*.apk --clobber || \
+          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
+            --title "BitChord $TAG (OriginOS)" \
+            --notes "Automated build with custom package name (com.apple.android.music) and AeroPulse Hi-Res Lossless integration."
