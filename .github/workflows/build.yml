@@ -2,7 +2,7 @@ name: Auto Build Renamed BitChord
 
 on:
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -158,11 +158,9 @@ jobs:
         run: |
           TAG="${{ steps.check_tag.outputs.tag }}"
           APKS=$(find app/build/outputs/apk/prod/release -type f -name "*.apk" | tr '\n' ' ')
-          echo "Publishing APKs to ${{ github.repository }}: $APKS"
+          echo "Uploading APKs to ${{ github.repository }} for $TAG: $APKS"
 
-          # Remove existing release on this fork if it already exists to avoid conflict
-          gh release delete "$TAG" --repo ${{ github.repository }} --yes 2>/dev/null || true
-
+          gh release upload "$TAG" $APKS --repo ${{ github.repository }} --clobber || \
           gh release create "$TAG" $APKS \
             --repo ${{ github.repository }} \
             --title "BitChord $TAG (OriginOS)" \
