@@ -2,11 +2,8 @@ name: Auto Build Renamed BitChord
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    - cron: '0 */2 * * *'  # Checks upstream every 2 hours
+  workflow_dispatch:        # Allows manual trigger anytime
 
 jobs:
   check-and-build:
@@ -46,9 +43,8 @@ jobs:
       - name: 3. Dynamic Package Renaming & In-App Updater Killer
         if: steps.check_tag.outputs.should_build == 'true'
         run: |
-          echo "Patching package name to com.apple.android.music..."
-          sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.apple.android.music"/' app/build.gradle.kts
-          find . -name "AndroidManifest.xml" -exec sed -i 's/package="[^"]*com\.bitchord[^"]*"/package="com.apple.android.music"/g' {} +
+          echo "Patching package name to com.soundcloud.android..."
+          sed -i -E 's/applicationId(\s*=\s*|\s+)".*"/applicationId = "com.soundcloud.android"/' app/build.gradle.kts
 
           echo "Disabling upstream in-app update checks..."
           find app/src -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's|api.github.com/repos/kushagrasinghx/BitChord/releases|localhost/disabled|g' {} +
@@ -115,7 +111,7 @@ jobs:
                       androidx.core.content.ContextCompat.registerReceiver(
                           this, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED
                       )
-                  } catch (_: Exception) {}"""
+                  } catch (_: Exception {}"""
               if target in content and "com.aeropulse.audio.ACTION_PRESET_CHANGED" not in content:
                   content = content.replace(target, receiver_code, 1)
                   with open(ps_file, "w", encoding="utf-8") as f:
@@ -135,16 +131,8 @@ jobs:
       - name: 6. Setup Release Signing Keystore & Build APKs
         if: steps.check_tag.outputs.should_build == 'true'
         run: |
-          echo "Generating signing keystore..."
-          keytool -genkeypair -v \
-            -keystore release.jks \
-            -alias bitchord \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass bitchord \
-            -keypass bitchord \
-            -dname "CN=BitChord, OU=Music, O=BitChord, L=Global, S=Global, C=US"
+          echo "Decoding permanent signing keystore..."
+          echo "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" | base64 -d > release.jks
 
           cat << 'EOF' > keystore.properties
           storeFile=release.jks
@@ -163,10 +151,16 @@ jobs:
         run: |
           TAG="${{ steps.check_tag.outputs.tag }}"
           APKS=$(find app/build/outputs/apk/prod/release -type f -name "*.apk" | tr '\n' ' ')
-          echo "Uploading APKs to ${{ github.repository }} for $TAG: $APKS"
 
+          echo "Removing old obsolete debugSigned assets from $TAG..."
+          gh release delete-asset "$TAG" "app-prod-arm64-v8a-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
+          gh release delete-asset "$TAG" "app-prod-armeabi-v7a-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
+          gh release delete-asset "$TAG" "app-prod-universal-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
+          gh release delete-asset "$TAG" "app-prod-x86_64-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
+
+          echo "Uploading APKs to ${{ github.repository }} for $TAG: $APKS"
           gh release upload "$TAG" $APKS --repo ${{ github.repository }} --clobber || \
           gh release create "$TAG" $APKS \
             --repo ${{ github.repository }} \
             --title "BitChord $TAG (OriginOS)" \
-            --notes "Automated build with custom package name (com.apple.android.music) and AeroPulse Hi-Res Lossless integration."
+            --notes "Automated build with custom package name (com.soundcloud.android) and AeroPulse Hi-Res Lossless integration."
