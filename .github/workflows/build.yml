@@ -111,7 +111,7 @@ jobs:
                       androidx.core.content.ContextCompat.registerReceiver(
                           this, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED
                       )
-                  } catch (_: Exception {}"""
+                  } catch (_: Exception) {}"""
               if target in content and "com.aeropulse.audio.ACTION_PRESET_CHANGED" not in content:
                   content = content.replace(target, receiver_code, 1)
                   with open(ps_file, "w", encoding="utf-8") as f:
