@@ -139,7 +139,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.check_tag.outputs.tag }}"
-          gh release upload "$TAG" app/build/outputs/apk/release/*.apk --clobber || \
-          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
+          APKS=$(find app/build/outputs/apk -type f -name "*.apk" | tr '\n' ' ')
+          echo "Found APKs to publish: $APKS"
+          gh release upload "$TAG" $APKS --clobber || \
+          gh release create "$TAG" $APKS \
             --title "BitChord $TAG (OriginOS)" \
             --notes "Automated build with custom package name (com.apple.android.music) and AeroPulse Hi-Res Lossless integration."
