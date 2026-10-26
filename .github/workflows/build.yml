@@ -52,7 +52,72 @@ jobs:
       - name: 4. Patch AeroPulse Hi-Res Lossless Treble Boost Integration
         if: steps.check_tag.outputs.should_build == 'true'
         run: |
-          echo "aW1wb3J0IG9zCgojIDEuIFBhdGNoIE5lcmRTdGF0cy5rdCB0byBob2xkIHRoZSBsaXZlIEFlcm9QdWxzZSBwcmVzZXQgc3RhdGUKbmVyZF9maWxlID0gInNoYXJlZC9zcmMvanZtU2hhcmVkTWFpbi9rb3RsaW4vY29tL211c2ljL2JpdGNob3JkL2RhdGEvTmVyZFN0YXRzLmt0IgppZiBvcy5wYXRoLmV4aXN0cyhuZXJkX2ZpbGUpOgogICAgd2l0aCBvcGVuKG5lcmRfZmlsZSwgInIiLCBlbmNvZGluZz0idXRmLTgiKSBhcyBmOgogICAgICAgIGNvbnRlbnQgPSBmLnJlYWQoKQogICAgdGFyZ2V0ID0gInZhbCBjdXJyZW50ID0gTXV0YWJsZVN0YXRlRmxvdzxTbmFwc2hvdD8+KG51bGwpIgogICAgcmVwbGFjZW1lbnQgPSAndmFsIGFlcm9QdWxzZVByZXNldCA9IE11dGFibGVTdGF0ZUZsb3c8U3RyaW5nPz4oIkhpLVJlcyBMb3NzbGVzcyDigKIgVHJlYmxlIEFpciBCb29zdCIpXG4gICAgdmFsIGN1cnJlbnQgPSBNdXRhYmxlU3RhdGVGbG93PFNuYXBzaG90Pz4obnVsbCknCiAgICBpZiB0YXJnZXQgaW4gY29udGVudCBhbmQgImFlcm9QdWxzZVByZXNldCIgbm90IGluIGNvbnRlbnQ6CiAgICAgICAgY29udGVudCA9IGNvbnRlbnQucmVwbGFjZSh0YXJnZXQsIHJlcGxhY2VtZW50LCAxKQogICAgICAgIHdpdGggb3BlbihuZXJkX2ZpbGUsICJ3IiwgZW5jb2Rpbmc9InV0Zi04IikgYXMgZjoKICAgICAgICAgICAgZi53cml0ZShjb250ZW50KQogICAgICAgIHByaW50KCLinJMgUGF0Y2hlZCBOZXJkU3RhdHMua3Qgc3VjY2Vzc2Z1bGx5IikKCiMgMi4gUGF0Y2ggUGxheWVyQ29udHJvbHMua3QgdG8gZGlzcGxheSBBZXJvUHVsc2UgTG9zc2xlc3MgYmFkZ2UgdW5kZXIgc2Vla2JhciAKcGZpbGUgPSAic2hhcmVkVWkvc3JjL2p2bVNoYXJlZE1haW4va290bGluL2NvbS9tdXNpYy9iaXRjaG9yZC91aS9wbGF5ZXIvUGxheWVyQ29udHJvbHMua3QiCmlmIG9zLnBhdGguZXhpc3RzKHBmaWxlKToKICAgIHdpdGggb3BlbihwZmlsZSwgInIiLCBlbmNvZGluZz0idXRmLTgiKSBhcyBmOgogICAgICAgIGNvbnRlbnQgPSBmLnJlYWQoKQogICAgdGFyZ2V0X2xvc3NsZXNzID0gInByaXZhdGUgZnVuIExvc3NsZXNzT3JTdGF0cyhcbiAgICBpc0xvYWRpbmc6IEJvb2xlYW4sXG4gICAgc3RpbGxSYWNpbmc6IEJvb2xlYW4sXG4gICAgbG9zc2xlc3NSZXF1ZXN0ZWQ6IEJvb2xlYW4sXG4gICAgbmVyZFN0YXRzOiBOZXJkU3RhdHMuU25hcHNob3Q/LFxuICAgIG1vZGlmaWVyOiBNb2RpZmllciA9IE1vZGlmaWVyLFxuKSB7IgogICAgcmVwbGFjZW1lbnRfbG9zc2xlc3MgPSB0YXJnZXRfbG9zc2xlc3MgKyAiIiIKICAgIHZhbCBhZXJvUHJlc2V0IGJ5IE5lcmRTdGF0cy5hZXJvUHVsc2VQcmVzZXQuY29sbGVjdEFzU3RhdGVXaXRoTGlmZWN5Y2xlKCkKICAgIGlmIChhZXJvUHJlc2V0ICE9IG51bGwpIHsKICAgICAgICBMb3NzbGVzc0xhYmVsKAogICAgICAgICAgICB0ZXh0ID0gYWVyb1ByZXNldCEhLAogICAgICAgICAgICBpY29uUGFpbnRlciA9IHBhaW50ZXJSZXNvdXJjZShSZXMuZHJhd2FibGUuaWNfbG9zc2xlc3MpLAogICAgICAgICAgICBhbmltYXRlZCA9IHRydWUsCiAgICAgICAgICAgIG1vZGlmaWVyID0gbW9kaWZpZXIsCiAgICAgICAgKQogICAgICAgIHJldHVybgogICAgfSIiIgogICAgaWYgdGFyZ2V0X2xvc3NsZXNzIGluIGNvbnRlbnQgYW5kICJhZXJvUHJlc2V0IiBub3QgaW4gY29udGVudDoKICAgICAgICBjb250ZW50ID0gY29udGVudC5yZXBsYWNlKHRhcmdldF9sb3NzbGVzcywgcmVwbGFjZW1lbnRfbG9zc2xlc3MsIDEpCiAgICAgICAgd2l0aCBvcGVuKHBmaWxlLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAgICAgIGYud3JpdGUoY29udGVudCkKICAgICAgICBwcmludCgi4pyTIFBhdGNoZWQgUGxheWVyQ29udHJvbHMua3QgTG9zc2xlc3MgYmFkZ2Ugc3VjY2Vzc2Z1bGx5IikKCiMgMy4gUGF0Y2ggUGxheWJhY2tTZXJ2aWNlLmt0IHRvIHJlY2VpdmUgYnJvYWRjYXN0IGV2ZW50cyBmcm9tIEFlcm9QdWxzZQpwc19maWxlID0gImFwcC9zcmMvbWFpbi9qYXZhL2NvbS9tdXNpYy9iaXRjaG9yZC9wbGF5YmFjay9QbGF5YmFja1NlcnZpY2Uua3QiCmlmIG9zLnBhdGguZXhpc3RzKHBzX2ZpbGUpOgogICAgd2l0aCBvcGVuKHBzX2ZpbGUsICiciLCBlbmNvZGluZz0idXRmLTgiKSBhcyBmOgogICAgICAgIGNvbnRlbnQgPSBmLnJlYWQoKQogICAgdGFyZ2V0ID0gIm92ZXJyaWRlIGZ1biBvbkNyZWF0ZSgpIHtcbiAgICAgICAgc3VwZXIub25DcmVhdGUoKSIKICAgIHJlY2VpdmVyX2NvZGUgPSAiIiJvdmVycmlkZSBmdW4gb25DcmVhdGUoKSB7CiAgICAgICAgc3VwZXIub25DcmVhdGUoKQogICAgICAgIHRyeSB7CiAgICAgICAgICAgIHZhbCBmaWx0ZXIgPSBhbmRyb2lkLmNvbnRlbnQuSW50ZW50RmlsdGVyKCJjb20uYWVyb3B1bHNlLmF1ZGlvLkFDVElPTl9QUkVTRVRfQ0hBTkdFRCIpCiAgICAgICAgICAgIHZhbCByZWNlaXZlciA9IG9iamVjdCA6IGFuZHJvaWQuY29udGVudC5Ccm9hZGNhc3RSZWNlaXZlcigpIHsKICAgICAgICAgICAgICAgIG92ZXJyaWRlIGZ1biBvblJlY2VpdmUoY3R4OiBhbmRyb2lkLmNvbnRlbnQuQ29udGV4dD8sIGludGVudDogYW5kcm9pZC5jb250ZW50LkludGVudD8pIHsKICAgICAgICAgICAgICAgICAgICBpbnRlbnQ/LmdldFN0cmluZ0V4dHJhKCJxdWFsaXR5X2xhYmVsIik/LmxldCB7CiAgICAgICAgICAgICAgICAgICAgICAgIGNvbS5tdXNpYy5iaXRjaG9yZC5kYXRhLk5lcmRTdGF0cy5hZXJvUHVsc2VQcmVzZXQudmFsdWUgPSBpdAogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICBhbmRyb2lkeC5jb3JlLmNvbnRlbnQuQ29udGV4dENvbXBhdC5yZWdpc3RlclJlY2VpdmVyKAogICAgICAgICAgICAgICAgdGhpcywgcmVjZWl2ZXIsIGZpbHRlciwgYW5kcm9pZHguY29yZS5jb250ZW50LkNvbnRleHRDb21wYXQuUkVDRUlWRVJfRVhQT1JURUQKICAgICAgICAgICAgKQogICAgICAgIH0gY2F0Y2ggKF86IEV4Y2VwdGlvbikge30iIiIKICAgIGlmIHRhcmdldCBpbiBjb250ZW50IGFuZCAiY29tLmFlcm9wdWxzZS5hdWRpby5BQ1RJT05fUFJFU0VUX0NIQU5HRUQiIG5vdCBpbiBjb250ZW50OgogICAgICAgIGNvbnRlbnQgPSBjb250ZW50LnJlcGxhY2UodGFyZ2V0LCByZWNlaXZlcl9jb2RlLCAxKQogICAgICAgIHdpdGggb3Blbihwc19maWxlLCAidyIsIGVuY29kaW5nPSJ1dGYtOCIpIGFzIGY6CiAgICAgICAgICAgIGYud3JpdGUoY29udGVudCkKICAgICAgICBwcmludCgi4pyTIFBhdGNoZWQgUGxheWJhY2tTZXJ2aWNlLmt0IHN1Y2Nlc3NmdWxseSIpCg==" | base64 -d > patch_aeropulse.py
+          cat << 'EOF' > patch_aeropulse.py
+          import os
+
+          # 1. Patch NerdStats.kt to hold the live AeroPulse preset state
+          nerd_file = "shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/NerdStats.kt"
+          if os.path.exists(nerd_file):
+              with open(nerd_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "val current = MutableStateFlow<Snapshot?>(null)"
+              replacement = 'val aeroPulsePreset = MutableStateFlow<String?>("Hi-Res Lossless • Treble Air Boost")\n    val current = MutableStateFlow<Snapshot?>(null)'
+              if target in content and "aeroPulsePreset" not in content:
+                  content = content.replace(target, replacement, 1)
+                  with open(nerd_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched NerdStats.kt successfully")
+
+          # 2. Patch PlayerControls.kt to display AeroPulse Lossless badge under the seekbar
+          pc_file = "sharedUi/src/jvmSharedMain/kotlin/com/music/bitchord/ui/player/PlayerControls.kt"
+          if os.path.exists(pc_file):
+              with open(pc_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "private fun LosslessOrStats(\n    isLoading: Boolean,\n    stillRacing: Boolean,\n    losslessRequested: Boolean,\n    nerdStats: NerdStats.Snapshot?,\n    modifier: Modifier = Modifier,\n) {"
+              replacement = target + """
+              val aeroPreset by NerdStats.aeroPulsePreset.collectAsStateWithLifecycle()
+              if (aeroPreset != null) {
+                  LosslessLabel(
+                      text = aeroPreset!!,
+                      iconPainter = painterResource(Res.drawable.ic_lossless),
+                      animated = true,
+                      modifier = modifier,
+                  )
+                  return
+              }"""
+              if target in content and "aeroPreset" not in content:
+                  content = content.replace(target, replacement, 1)
+                  with open(pc_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched PlayerControls.kt successfully")
+
+          # 3. Patch PlaybackService.kt to receive broadcast events from AeroPulse
+          ps_file = "app/src/main/java/com/music/bitchord/playback/PlaybackService.kt"
+          if os.path.exists(ps_file):
+              with open(ps_file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              target = "override fun onCreate() {\n        super.onCreate()"
+              receiver_code = """override fun onCreate() {
+                  super.onCreate()
+                  try {
+                      val filter = android.content.IntentFilter("com.aeropulse.audio.ACTION_PRESET_CHANGED")
+                      val receiver = object : android.content.BroadcastReceiver() {
+                          override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+                              intent?.getStringExtra("quality_label")?.let {
+                                  com.music.bitchord.data.NerdStats.aeroPulsePreset.value = it
+                              }
+                          }
+                      }
+                      androidx.core.content.ContextCompat.registerReceiver(
+                          this, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                      )
+                  } catch (_: Exception) {}"""
+              if target in content and "com.aeropulse.audio.ACTION_PRESET_CHANGED" not in content:
+                  content = content.replace(target, receiver_code, 1)
+                  with open(ps_file, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("✓ Patched PlaybackService.kt successfully")
+          EOF
           python3 patch_aeropulse.py
 
       - name: 5. Setup Java JDK 17
