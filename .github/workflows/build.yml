@@ -60,7 +60,7 @@ jobs:
               with open(nerd_file, "r", encoding="utf-8") as f:
                   content = f.read()
               target = "val current = MutableStateFlow<Snapshot?>(null)"
-              replacement = 'val aeroPulsePreset = MutableStateFlow<String?>("Lossless • Treble Air Boost")\n    val current = MutableStateFlow<Snapshot?>(null)'
+              replacement = 'val aeroPulsePreset = MutableStateFlow<String?>("Hi-Res Lossless • Treble Air Boost")\n    val current = MutableStateFlow<Snapshot?>(null)'
               if target in content and "aeroPulsePreset" not in content:
                   content = content.replace(target, replacement, 1)
                   with open(nerd_file, "w", encoding="utf-8") as f:
@@ -127,11 +127,29 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: 6. Build and Sign APKs
+      - name: 6. Setup Release Signing Keystore & Build APKs
         if: steps.check_tag.outputs.should_build == 'true'
         run: |
+          echo "Generating signing keystore..."
+          keytool -genkeypair -v \
+            -keystore release.jks \
+            -alias bitchord \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass bitchord \
+            -keypass bitchord \
+            -dname "CN=BitChord, OU=Music, O=BitChord, L=Global, S=Global, C=US"
+
+          cat << 'EOF' > keystore.properties
+          storeFile=release.jks
+          storePassword=bitchord
+          keyAlias=bitchord
+          keyPassword=bitchord
+          EOF
+
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleProdRelease --no-daemon
 
       - name: 7. Publish GitHub Release
         if: steps.check_tag.outputs.should_build == 'true'
@@ -139,9 +157,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.check_tag.outputs.tag }}"
-          APKS=$(find app/build/outputs/apk -type f -name "*.apk" | tr '\n' ' ')
-          echo "Found APKs to publish: $APKS"
-          gh release upload "$TAG" $APKS --clobber || \
+          APKS=$(find app/build/outputs/apk/prod/release -type f -name "*.apk" | tr '\n' ' ')
+          echo "Publishing APKs to ${{ github.repository }}: $APKS"
+
+          # Remove existing release on this fork if it already exists to avoid conflict
+          gh release delete "$TAG" --repo ${{ github.repository }} --yes 2>/dev/null || true
+
           gh release create "$TAG" $APKS \
+            --repo ${{ github.repository }} \
             --title "BitChord $TAG (OriginOS)" \
             --notes "Automated build with custom package name (com.apple.android.music) and AeroPulse Hi-Res Lossless integration."
