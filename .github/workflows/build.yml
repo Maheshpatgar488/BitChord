@@ -5,9 +5,14 @@ on:
     - cron: '0 */2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   check-and-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 1. Check Latest Upstream Tag
         id: check_tag
