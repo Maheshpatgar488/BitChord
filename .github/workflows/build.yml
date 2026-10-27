@@ -49,78 +49,7 @@ jobs:
           echo "Disabling upstream in-app update checks..."
           find app/src -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's|api.github.com/repos/kushagrasinghx/BitChord/releases|localhost/disabled|g' {} +
 
-      - name: 4. Patch AeroPulse Hi-Res Lossless Treble Boost Integration
-        if: steps.check_tag.outputs.should_build == 'true'
-        run: |
-          cat << 'EOF' > patch_aeropulse.py
-          import os
-
-          # 1. Patch NerdStats.kt to hold the live AeroPulse preset state
-          nerd_file = "shared/src/jvmSharedMain/kotlin/com/music/bitchord/data/NerdStats.kt"
-          if os.path.exists(nerd_file):
-              with open(nerd_file, "r", encoding="utf-8") as f:
-                  content = f.read()
-              target = "val current = MutableStateFlow<Snapshot?>(null)"
-              replacement = 'val aeroPulsePreset = MutableStateFlow<String?>("Hi-Res Lossless • Treble Air Boost")\n    val current = MutableStateFlow<Snapshot?>(null)'
-              if target in content and "aeroPulsePreset" not in content:
-                  content = content.replace(target, replacement, 1)
-                  with open(nerd_file, "w", encoding="utf-8") as f:
-                      f.write(content)
-                  print("✓ Patched NerdStats.kt successfully")
-
-          # 2. Patch PlayerControls.kt to display AeroPulse Lossless badge under the seekbar
-          pc_file = "sharedUi/src/jvmSharedMain/kotlin/com/music/bitchord/ui/player/PlayerControls.kt"
-          if os.path.exists(pc_file):
-              with open(pc_file, "r", encoding="utf-8") as f:
-                  content = f.read()
-              target = "private fun LosslessOrStats(\n    isLoading: Boolean,\n    stillRacing: Boolean,\n    losslessRequested: Boolean,\n    nerdStats: NerdStats.Snapshot?,\n    modifier: Modifier = Modifier,\n) {"
-              replacement = target + """
-              val aeroPreset by NerdStats.aeroPulsePreset.collectAsStateWithLifecycle()
-              if (aeroPreset != null) {
-                  LosslessLabel(
-                      text = aeroPreset!!,
-                      iconPainter = painterResource(Res.drawable.ic_lossless),
-                      animated = true,
-                      modifier = modifier,
-                  )
-                  return
-              }"""
-              if target in content and "aeroPreset" not in content:
-                  content = content.replace(target, replacement, 1)
-                  with open(pc_file, "w", encoding="utf-8") as f:
-                      f.write(content)
-                  print("✓ Patched PlayerControls.kt successfully")
-
-          # 3. Patch PlaybackService.kt to receive broadcast events from AeroPulse
-          ps_file = "app/src/main/java/com/music/bitchord/playback/PlaybackService.kt"
-          if os.path.exists(ps_file):
-              with open(ps_file, "r", encoding="utf-8") as f:
-                  content = f.read()
-              target = "override fun onCreate() {\n        super.onCreate()"
-              receiver_code = """override fun onCreate() {
-                  super.onCreate()
-                  try {
-                      val filter = android.content.IntentFilter("com.aeropulse.audio.ACTION_PRESET_CHANGED")
-                      val receiver = object : android.content.BroadcastReceiver() {
-                          override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
-                              intent?.getStringExtra("quality_label")?.let {
-                                  com.music.bitchord.data.NerdStats.aeroPulsePreset.value = it
-                              }
-                          }
-                      }
-                      androidx.core.content.ContextCompat.registerReceiver(
-                          this, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED
-                      )
-                  } catch (_: Exception) {}"""
-              if target in content and "com.aeropulse.audio.ACTION_PRESET_CHANGED" not in content:
-                  content = content.replace(target, receiver_code, 1)
-                  with open(ps_file, "w", encoding="utf-8") as f:
-                      f.write(content)
-                  print("✓ Patched PlaybackService.kt successfully")
-          EOF
-          python3 patch_aeropulse.py
-
-      - name: 5. Setup Java JDK 17
+      - name: 4. Setup Java JDK 17
         if: steps.check_tag.outputs.should_build == 'true'
         uses: actions/setup-java@v4
         with:
@@ -128,7 +57,7 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: 6. Setup Release Signing Keystore & Build APKs
+      - name: 5. Setup Release Signing Keystore & Build APKs
         if: steps.check_tag.outputs.should_build == 'true'
         run: |
           echo "Decoding permanent signing keystore..."
@@ -144,7 +73,7 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleProdRelease --no-daemon
 
-      - name: 7. Publish GitHub Release
+      - name: 6. Publish GitHub Release
         if: steps.check_tag.outputs.should_build == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -152,15 +81,15 @@ jobs:
           TAG="${{ steps.check_tag.outputs.tag }}"
           APKS=$(find app/build/outputs/apk/prod/release -type f -name "*.apk" | tr '\n' ' ')
 
-          echo "Removing old obsolete debugSigned assets from $TAG..."
+          echo "Removing obsolete debugSigned assets from $TAG..."
           gh release delete-asset "$TAG" "app-prod-arm64-v8a-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
           gh release delete-asset "$TAG" "app-prod-armeabi-v7a-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
           gh release delete-asset "$TAG" "app-prod-universal-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
           gh release delete-asset "$TAG" "app-prod-x86_64-release-aligned-debugSigned.apk" --repo ${{ github.repository }} -y 2>/dev/null || true
 
-          echo "Uploading APKs to ${{ github.repository }} for $TAG: $APKS"
+          echo "Uploading clean APKs to ${{ github.repository }} for $TAG: $APKS"
           gh release upload "$TAG" $APKS --repo ${{ github.repository }} --clobber || \
           gh release create "$TAG" $APKS \
             --repo ${{ github.repository }} \
             --title "BitChord $TAG (OriginOS)" \
-            --notes "Automated build with custom package name (com.soundcloud.android) and AeroPulse Hi-Res Lossless integration."
+            --notes "Clean build with custom package name (com.soundcloud.android)."
