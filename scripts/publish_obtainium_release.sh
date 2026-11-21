@@ -37,6 +37,7 @@ if [[ -z "$TOKEN" ]]; then
   echo "publish: no GitHub token available; skipping"
   exit 0
 fi
+echo "publish: token source ready (${#TOKEN} chars)"
 
 API="https://api.github.com/repos/Maheshpatgar488/BitChord"
 AUTH="Authorization: Bearer ${TOKEN}"
