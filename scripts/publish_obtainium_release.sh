@@ -42,7 +42,7 @@ echo "publish: token source ready (${#TOKEN} chars)"
 
 API="https://api.github.com/repos/Maheshpatgar488/BitChord"
 AUTH="Authorization: Bearer ${TOKEN}"
-TMP_JSON="${TMPDIR:-/data/user/0/ai.antigem/files/usr/tmp}/bitchord-obtainium-release.json"
+TMP_JSON="${TMPDIR:-/tmp}/bitchord-obtainium-release.json"
 
 echo "publish: looking up release $TAG"
 status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -H "$AUTH" -H 'Accept: application/vnd.github+json' "$API/releases/tags/$TAG" || true)"
