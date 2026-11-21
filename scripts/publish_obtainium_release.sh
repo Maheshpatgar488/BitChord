@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Creates/updates a GitHub release whenever the version code changes.
 # Runs inside GitHub Actions after :app:assembleProdRelease.
-set -euo pipefail
+set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 read_version() {
-  grep -F "extra[\"$1\"]" build.gradle.kts | head -n 1 | sed -E 's/^[^=]*= *"?([^"]*)"?.*$/\1/'
+  grep -F "extra[\"$1\"]" build.gradle.kts | head -n 1 | sed -E 's/^[^=]*= *"?([^"]*)"?.*$/\1/' | tr -d '\r\n '
 }
 
 VERSION_CODE="$(read_version bitchordVersionCode)"
@@ -19,10 +19,10 @@ fi
 
 # Include versionCode in the tag so a code-only bump also produces a new release.
 TAG="v${VERSION_NAME}.${VERSION_CODE}"
-APK_DIR="app/build/outputs/apk/prod/release"
+APK_DIR="${APK_DIR:-app/build/outputs/apk/prod/release}"
 mapfile -t APKS < <(find "$APK_DIR" -maxdepth 1 -type f -name '*.apk' | sort)
 if [[ ${#APKS[@]} -eq 0 ]]; then
-  echo "publish: no phone APKs found; skipping"
+  echo "publish: no phone APKs found in $APK_DIR; skipping"
   exit 0
 fi
 
@@ -30,9 +30,10 @@ fi
 TOKEN=""
 HEADER="$(git config --get http.https://github.com/.extraheader || true)"
 if [[ -n "$HEADER" ]]; then
-  TOKEN="$(printf '%s' "$HEADER" | sed -n 's/.*AUTHORIZATION: basic //p' | base64 -d | sed -n 's/^x-access-token://p')"
+  TOKEN="$(printf '%s' "$HEADER" | sed -n 's/.*[Aa][Uu][Tt][Hh][Oo][Rr][Ii][Zz][Aa][Tt][Ii][Oo][Nn]: [Bb][Aa][Ss][Ii][Cc] //p' | base64 -d 2>/dev/null | sed -n 's/^x-access-token://p' | tr -d '\r\n')"
 fi
 TOKEN="${TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-}}}"
+TOKEN="$(printf '%s' "$TOKEN" | tr -d '\r\n')"
 if [[ -z "$TOKEN" ]]; then
   echo "publish: no GitHub token available; skipping"
   exit 0
@@ -43,18 +44,22 @@ API="https://api.github.com/repos/Maheshpatgar488/BitChord"
 AUTH="Authorization: Bearer ${TOKEN}"
 TMP_JSON="${TMPDIR:-/data/user/0/ai.antigem/files/usr/tmp}/bitchord-obtainium-release.json"
 
-status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -H "$AUTH" -H 'Accept: application/vnd.github+json' "$API/releases/tags/$TAG")"
+echo "publish: looking up release $TAG"
+status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -H "$AUTH" -H 'Accept: application/vnd.github+json' "$API/releases/tags/$TAG" || true)"
+echo "publish: lookup status $status"
+
 if [[ "$status" == "404" ]]; then
   payload="$(printf '{"tag_name":"%s","name":"BitChord %s (OriginOS)","body":"Automatic phone-only release. Version %s, code %s.","draft":false,"prerelease":false}' \
     "$TAG" "$VERSION_NAME" "$VERSION_NAME" "$VERSION_CODE")"
-  status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -X POST -H "$AUTH" -H 'Accept: application/vnd.github+json' -d "$payload" "$API/releases")"
+  status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -X POST -H "$AUTH" -H 'Accept: application/vnd.github+json' -d "$payload" "$API/releases" || true)"
+  echo "publish: create status $status"
   if [[ "$status" != "201" ]]; then
-    echo "publish: release create failed ($status)"
+    echo "publish: release create failed"
     cat "$TMP_JSON"
     exit 1
   fi
 elif [[ "$status" != "200" ]]; then
-  echo "publish: release lookup failed ($status)"
+  echo "publish: release lookup failed"
   cat "$TMP_JSON"
   exit 1
 fi
@@ -70,9 +75,10 @@ for apk in "${APKS[@]}"; do
   fi
   echo "publish: uploading $name"
   status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -X POST -H "$AUTH" -H 'Accept: application/vnd.github+json' \
-    -H 'Content-Type: application/vnd.android.package-archive' --data-binary "@$apk" "$UPLOAD_URL?name=$name")"
+    -H 'Content-Type: application/vnd.android.package-archive' --data-binary "@$apk" "$UPLOAD_URL?name=$name" || true)"
+  echo "publish: upload status $status"
   if [[ "$status" != "201" ]]; then
-    echo "publish: upload failed for $name ($status)"
+    echo "publish: upload failed for $name"
     cat "$TMP_JSON"
     exit 1
   fi
