@@ -589,6 +589,6 @@ tasks.withType<Test>().configureEach {
     enabled = false
 }
 
-tasks.named("assembleProdRelease") {
+tasks.matching { it.name == "assembleProdRelease" }.configureEach {
     finalizedBy(rootProject.tasks.named("publishObtainiumRelease"))
 }
