@@ -75,3 +75,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.20" apply false
     id("org.jetbrains.compose") version "1.10.3" apply false
 }
+
+// After every phone release build, publish a GitHub release whose tag includes
+// versionCode. Obtainium then sees a new release even when only the code bumps.
+tasks.register("publishObtainiumRelease") {
+    group = "release"
+    description = "Creates/updates the phone-only GitHub release for the current version."
+    doLast {
+        val script = rootProject.file("scripts/publish_obtainium_release.sh")
+        val process = ProcessBuilder("bash", script.absolutePath)
+            .directory(rootProject.rootDir)
+            .inheritIO()
+            .start()
+        if (process.waitFor() != 0) {
+            throw RuntimeException("publishObtainiumRelease failed")
+        }
+    }
+}

@@ -160,12 +160,14 @@ android {
         // the keystore has to be looked for rather than assumed.
         val store = signing.getProperty("storeFile")?.let { rootProject.file(it) }
         val alias = signing.getProperty("keyAlias")
-        if (store != null && store.exists() && !alias.isNullOrBlank()) {
+        val useBundled = alias.isNullOrBlank()
+        val releaseStore = if (useBundled) rootProject.file("release.jks") else store
+        if (releaseStore != null && releaseStore.exists()) {
             create("release") {
-                storeFile = store
-                storePassword = signing.getProperty("storePassword")
-                keyAlias = signing.getProperty("keyAlias")
-                keyPassword = signing.getProperty("keyPassword")
+                storeFile = releaseStore
+                storePassword = if (useBundled) "bitchord" else signing.getProperty("storePassword")
+                keyAlias = if (useBundled) "bitchord" else alias!!
+                keyPassword = if (useBundled) "bitchord" else signing.getProperty("keyPassword")
             }
         }
     }
@@ -197,8 +199,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Signs with debug keystore to bypass missing private keys on forks
-            signingConfig = signingConfigs.getByName("debug")
+            // Sign with the fork's release key (bundled fallback when no secrets
+            // are configured) so updates keep the same signature on OriginOS.
+            signingConfig = signingConfigs.getByName("release")
         }
         /*
          * The release build, installable next to the dev and prod apps: same R8,
@@ -566,7 +569,7 @@ abstract class BundleWearApk : DefaultTask() {
     }
 }
 
-if (providers.gradleProperty("bitchord.bundleWear").orNull != "false" && findProject(":wearos") != null) {
+if (providers.gradleProperty("bitchord.bundleWear").orNull == "true" && findProject(":wearos") != null) {
     androidComponents.onVariants { variant ->
         val flavor = variant.productFlavors.firstOrNull { it.first == "env" }?.second ?: return@onVariants
         val type = variant.buildType ?: return@onVariants
@@ -583,4 +586,8 @@ if (providers.gradleProperty("bitchord.bundleWear").orNull != "false" && findPro
 
 tasks.withType<Test>().configureEach {
     enabled = false
+}
+
+tasks.named("assembleProdRelease") {
+    finalizedBy(rootProject.tasks.named("publishObtainiumRelease"))
 }

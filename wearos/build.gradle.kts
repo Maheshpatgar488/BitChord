@@ -66,12 +66,14 @@ android {
         // The phone's keystore, found the same way app/build.gradle.kts finds it.
         val store = signing.getProperty("storeFile")?.let { rootProject.file(it) }
         val alias = signing.getProperty("keyAlias")
-        if (store != null && store.exists() && !alias.isNullOrBlank()) {
+        val useBundled = alias.isNullOrBlank()
+        val releaseStore = if (useBundled) rootProject.file("release.jks") else store
+        if (releaseStore != null && releaseStore.exists()) {
             create("release") {
-                storeFile = store
-                storePassword = signing.getProperty("storePassword")
-                keyAlias = signing.getProperty("keyAlias")
-                keyPassword = signing.getProperty("keyPassword")
+                storeFile = releaseStore
+                storePassword = if (useBundled) "bitchord" else signing.getProperty("storePassword")
+                keyAlias = if (useBundled) "bitchord" else alias!!
+                keyPassword = if (useBundled) "bitchord" else signing.getProperty("keyPassword")
             }
         }
     }
