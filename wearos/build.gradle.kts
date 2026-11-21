@@ -65,7 +65,8 @@ android {
     signingConfigs {
         // The phone's keystore, found the same way app/build.gradle.kts finds it.
         val store = signing.getProperty("storeFile")?.let { rootProject.file(it) }
-        if (store != null && store.exists()) {
+        val alias = signing.getProperty("keyAlias")
+        if (store != null && store.exists() && !alias.isNullOrBlank()) {
             create("release") {
                 storeFile = store
                 storePassword = signing.getProperty("storePassword")
@@ -104,7 +105,7 @@ android {
             )
             // Null without a keystore, like the phone: an unsigned APK rather
             // than a build failure.
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
