@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
     repositories {
@@ -82,12 +84,16 @@ tasks.register("publishObtainiumRelease") {
     group = "release"
     description = "Creates/updates the phone-only GitHub release for the current version."
     doLast {
-        val script = rootProject.file("scripts/publish_obtainium_release.sh")
-        val process = ProcessBuilder("bash", script.absolutePath)
-            .directory(rootProject.rootDir)
-            .inheritIO()
-            .start()
-        if (process.waitFor() != 0) {
+        val output = ByteArrayOutputStream()
+        val result = exec {
+            commandLine("bash", rootProject.file("scripts/publish_obtainium_release.sh").absolutePath)
+            workingDir(rootProject.rootDir)
+            standardOutput = output
+            errorOutput = output
+            isIgnoreExitValue = true
+        }
+        println(output.toString())
+        if (result.exitValue != 0) {
             throw RuntimeException("publishObtainiumRelease failed")
         }
     }

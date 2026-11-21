@@ -34,9 +34,8 @@ val androidSdk: String? = file("local.properties")
     ?: System.getenv("ANDROID_SDK_ROOT")
 
 if (androidSdk != null && file(androidSdk).isDirectory) {
+    // Phone only: TV and Wear OS are intentionally not part of this fork.
     include(":app")
-    include(":tv")
-    include(":wearos")
 } else {
     logger.lifecycle("No Android SDK found — building the desktop targets only.")
 }
