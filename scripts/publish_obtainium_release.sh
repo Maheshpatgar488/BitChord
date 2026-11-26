@@ -69,9 +69,10 @@ EXISTING="$(python3 -c 'import json,sys; print("\n".join(a["name"] for a in json
 
 for apk in "${APKS[@]}"; do
   name="$(basename "$apk")"
-  if printf '%s\n' "$EXISTING" | grep -Fxq "$name"; then
-    echo "publish: $name already uploaded"
-    continue
+  asset_id="$(python3 -c "import json,sys; print(next((str(a['id']) for a in json.load(open(sys.argv[1])).get('assets', []) if a.get('name') == sys.argv[2]), ''))" "$TMP_JSON" "$name")"
+  if [[ -n "$asset_id" ]]; then
+    echo "publish: deleting existing asset $name (id $asset_id) to replace with fresh build"
+    curl -s -X DELETE -H "$AUTH" -H 'Accept: application/vnd.github+json' "$API/releases/assets/$asset_id" >/dev/null || true
   fi
   echo "publish: uploading $name"
   status="$(curl -s -o "$TMP_JSON" -w '%{http_code}' -X POST -H "$AUTH" -H 'Accept: application/vnd.github+json' \
