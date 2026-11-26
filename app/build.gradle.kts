@@ -84,7 +84,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.spotify.music"
+        applicationId = "com.apple.android.music"
         // 26 keeps reach wide; real-time blur (RenderEffect) kicks in on API 31+,
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
@@ -142,12 +142,12 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            applicationId = "com.spotify.music"
+            applicationId = "com.apple.android.music"
             resValue("string", "app_name", "BitChord")
         }
         create("prod") {
             dimension = "env"
-            applicationId = "com.spotify.music"
+            applicationId = "com.apple.android.music"
         }
     }
 
